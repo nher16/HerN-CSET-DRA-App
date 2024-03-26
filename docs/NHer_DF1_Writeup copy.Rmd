@@ -1,0 +1,140 @@
+---
+title: "Exploring the mechanisms of unpaid labor activities of Native Americans"
+author: "Nayomi Her"
+date: 2/29/2024
+output:
+  bookdown::html_document2:
+    split_by: none
+    df_print: paged
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE, message=FALSE, error = TRUE)
+options(htmltools.dir.version = FALSE)
+```
+
+# Background and Motivation
+
+Unpaid labor is a major labor market issue with disparities across race/ethnicity and gender. In partnership with the Center for Indian Country Development (CICD), I will be exploring the differences in how much time is spent taking care of family between Native Americans and non-Native Americans. Headquartered at the Federal Reserve Bank of Minneapolis, the CICD is a national research and policy institute that seeks to advance the economic prosperity of Native nations and Indigenous communities through research and policy action. Investigating time-use disparities in unpaid labor is important because the time that is spent taking care of family is not only a huge task on an individual but it takes away from that individual's time too. For example, it can make it more difficult to earn money for the household when you are spending more time taking care of family than working. In this blog post, I will discuss the  main variables of interest and their relationships to family caretaking time, the steps that I have taken so far, and dive into the educational backgrounds between Native and non-Native Americans.
+
+## Some terms and practices to know regarding Native American experiences
+
+Native Americans are very diverse in their individual cultures, tribes, and histories. This is the same for how they identify. Throughout this blog post, I will primarily refer to Native individuals as either Native Americans/individuals/respondents. The racial categorization used in the data is based off the individuals' self-reporting on the American Community Survey (ACS) and the Census' racial categories. The Census' category for Native Americans uses the term American Indian or Alaska Native (AIAN), and many Native Americans choose to self-identify with this term as well. A majority of Native census respondents self-identify as more than one race so in order to be more inclusive of all Native-identifying respondents, AIAN alone or in combination with one or more races (AIANac) will be used to represent Native experiences and outcomes of this analysis.
+
+# The Data
+
+To explore these relationships, I am using data from 2019 from the American Time Use Survey (ATUS). ATUS is a collection of household-level data that is specially used to analyze outcomes and experiences with how people spend their time. Note: the data was collected/facilitated by [CICD](https://www.minneapolisfed.org/indiancountry) and made accessible by [IPUMS](https://www.ipums.org/). The ATUS provides data on the amount of time that is spent taking care of family as well as other demographic indicators. The following is a list of variables that I am using for this analysis:
+
+-   Time spent taking care of family
+-   Employment status
+-   Educational attainment
+-   Income
+-   AIAN alone or in combination with one or more races
+-   Gender
+
+## Data Cleaning (technical)
+
+Here are the R libraries I am using to help me clean and analyze the data.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(knitr)
+library(viridis)
+library(dplyr)
+
+options(scipen = 999)
+```
+
+Data collection isn't perfect so here's how I've made the data easier to work with and analyze outcomes. Since I am focusing on the differences between Native and non-Native Americans, I have created two subsets based on whether an individual is AIANac or not. This allows me to individually look at outcomes for AIANac and non-Native respondents and analyze any differences that may appear.
+
+```{r echo=FALSE}
+atus <- read.csv("/Users/nayher/Desktop/DSCI3200W/datasaurs/atus_USA_datafest2024_v2.csv",
+                 header=T) 
+```
+
+```{r}
+#AIANac subset
+aianac<-subset(atus,atus$aianac==1)
+#non-AIANac subset
+nonaianac<-subset(atus,atus$aianac==0)
+```
+
+With one of the variables of interest being income, I looked for any discrepancies in this variable. This variable is coded as \$2,500 intervals of income, which is harder to analyze and explore relationships in statistical softwares such as R. To fix this, a new variable *faminc_new* was created that categorizes each bucket on a scale of 1 to 16, with 1 representing family incomes of less than \$5,000 and 16 representing \$150,000 and over.
+
+```{r echo=FALSE}
+atus <- atus %>% # this line tells R to make the change permanent to the atus dataset
+  mutate(         # mutate is to make a change to the data
+    faminc_new = case_when( # a fancy/tidier if/then for when you have a lot of conditions
+      famincome == "Less than $5,000" ~ 1,        
+      famincome == "$5,000 to $7,499" ~ 2,              
+      famincome == "$7,500 to $9,999" ~ 3,  
+      famincome == "$10,000 to $12,499" ~ 4,
+      famincome == "$12,500 to $14,999" ~ 5,
+      famincome == "$15,000 to $19,999" ~ 6,
+      famincome == "$20,000 to $24,999" ~ 7,
+      famincome == "$25,000 to $29,999" ~ 8,
+      famincome == "$30,000 to $34,999" ~ 9,
+      famincome == "$35,000 to $39,999" ~ 10,
+      famincome == "$40,000 to $49,999" ~ 11,
+      famincome == "$50,000 to $59,999" ~ 12,
+      famincome == "$60,000 to $74,999" ~ 13,
+      famincome == "$75,000 to $99,999" ~ 14,
+      famincome == "$100,000 to $149,999" ~ 15,
+      famincome == "$150,000 and over" ~ 16,
+      TRUE ~ NA # this is the "else" line so if there's any other values, set it to NA
+    )
+  )
+
+atus <- atus %>% 
+  mutate(faminc_new = factor(faminc_new)) # sets the vars as factors, so R treats it as a categorical rather than numeric var
+```
+
+# Preliminary Results
+
+```{r echo=FALSE, fig.show='hide'}
+# descriptive bar graph on AIANac educational attainment, oriented to the left
+ggplot(aianac, aes(x=educ)) +
+    geom_bar(fill="lightblue") +
+    labs(x="Educational Attainment", y="Number of People") +
+    coord_flip()
+
+```
+
+```{r echo=FALSE, fig.show='hide'}
+# bar graph on education 
+  ggplot(aianac, aes(x=educ)) +
+    geom_bar(aes(x = fct_rev(fct_infreq(educ)))) + # descending order
+        labs(x="Educational Attainment", y="Number of People") +
+        coord_flip()
+```
+
+```{r echo=FALSE, fig.show='hide'}
+  ggplot(aianac, aes(x=educ)) +
+    geom_bar(aes(x = fct_rev(fct_infreq(educ))), fill="lightblue") + #changed color
+        labs(x="Educational Attainment", y="Number of People") +
+        coord_flip()
+```
+
+Education is a very important factor to look at when looking at labor market disparities. Looking at the educational attainment rates will let us know if this plays a role in time use differences. The graph below displays the educational attainment rates for Native respondents. A large majority of Native individuals have at most, a high school diploma. It also looks like a fair share of Native individuals are in pursuit of a college degree, if they don't already have one. In comparison, non-Native individuals have a high share of obtaining a bachelor's degree. Between the two groups, this implies that non-Native individuals may have more support to pursue a postsecondary education or that their educational background may potentially influence the amount of time spent taking care of family. 
+
+*Please also note the difference in population sizes for these variables as there are about 150 responses for Native Americans' educational attainment and over 7,500 responses for non-Natives. It is important to continue the analysis despite this difference as Native American experiences are often overlooked due to smaller sample sizes.*
+
+```{r echo=FALSE, message=FALSE}
+  ggplot(aianac, aes(x=educ)) +
+    geom_bar(aes(x = fct_rev(fct_infreq(educ))), fill="lightblue") +
+        labs(title = "Educational Attainment of AIANac", # added title
+             x="Educational Attainment", 
+             y="Number of People") +
+        coord_flip()
+```
+
+```{r echo=FALSE, message=FALSE}
+# descriptive bar graph on non-AIANac educational attainment, descending order, different color
+    ggplot(nonaianac, aes(x=educ)) +
+    geom_bar(aes(x = fct_rev(fct_infreq(educ))), fill="mediumpurple4") +
+        labs(title = "Educational Attainment of non-AIANac", 
+             x="Educational Attainment", 
+             y="Number of People") +
+        coord_flip()
+```
